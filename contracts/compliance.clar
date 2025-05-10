@@ -1,30 +1,42 @@
+;; Compliance Contract
+;; Ensures adherence to regulatory requirements
 
-;; title: compliance
-;; version:
-;; summary:
-;; description:
+(define-data-var admin principal tx-sender)
 
-;; traits
-;;
+;; Map to store compliance status
+(define-map compliance-status
+  { holder: principal, year: uint }
+  { compliant: bool, last-audit: uint })
 
-;; token definitions
-;;
+;; Error codes
+(define-constant ERR-NOT-AUTHORIZED (err u100))
 
-;; constants
-;;
+;; Check if caller is admin
+(define-private (is-admin)
+  (is-eq tx-sender (var-get admin)))
 
-;; data vars
-;;
+;; Set compliance status for a rights holder
+(define-public (set-compliance-status
+                (holder principal)
+                (year uint)
+                (compliant bool))
+  (begin
+    (asserts! (is-admin) ERR-NOT-AUTHORIZED)
+    (ok (map-set compliance-status
+                { holder: holder, year: year }
+                { compliant: compliant, last-audit: block-height }))))
 
-;; data maps
-;;
+;; Get compliance status for a rights holder
+(define-read-only (get-compliance-status (holder principal) (year uint))
+  (default-to { compliant: false, last-audit: u0 }
+              (map-get? compliance-status { holder: holder, year: year })))
 
-;; public functions
-;;
+;; Check if a rights holder is compliant
+(define-read-only (is-compliant (holder principal) (year uint))
+  (get compliant (get-compliance-status holder year)))
 
-;; read only functions
-;;
-
-;; private functions
-;;
-
+;; Transfer admin rights
+(define-public (transfer-admin (new-admin principal))
+  (begin
+    (asserts! (is-admin) ERR-NOT-AUTHORIZED)
+    (ok (var-set admin new-admin))))
